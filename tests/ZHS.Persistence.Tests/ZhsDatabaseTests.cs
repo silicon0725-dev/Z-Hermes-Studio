@@ -1,3 +1,4 @@
+using ZHS.Domain.Artifacts;
 using ZHS.Domain.Tasks;
 using TaskStatus = ZHS.Domain.Tasks.TaskStatus;
 using ZHS.Persistence;
@@ -118,6 +119,68 @@ public sealed class TaskStoreTests : IAsyncDisposable
         var list = await store.ListAsync();
 
         Assert.Equal("task_new", list[0].TaskId);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _database.DisposeAsync();
+        try
+        {
+            File.Delete(_path);
+        }
+        catch (Exception)
+        {
+        }
+    }
+}
+
+public sealed class ArtifactStoreTests : IAsyncDisposable
+{
+    private readonly string _path = Path.Combine(Path.GetTempPath(), "zhs-art-" + Guid.NewGuid().ToString("N") + ".sqlite");
+    private readonly ZhsDatabase _database;
+
+    public ArtifactStoreTests()
+    {
+        _database = ZhsDatabase.OpenAsync(_path, "0.1.0").GetAwaiter().GetResult();
+    }
+
+    [Fact]
+    public async Task FullLifecycle_RoundTrips()
+    {
+        var store = new ArtifactSqliteStore(_database);
+        var project = await store.GetOrCreateProjectAsync("/tmp/art-ws");
+        var artifact = await store.CreateAsync(
+            new Artifact("art_1", project.ProjectId, ArtifactTypes.WorkflowRun, "集群执行：验收", ArtifactStatus.Draft, 1, 1, 1, ["zcac:run:run_1"]),
+            "{\"runId\":\"run_1\"}");
+        await store.AppendVersionAsync(artifact with { SourceRefs = ["zhs:task:t1"] }, "{\"v\":2}");
+
+        var loaded = await store.GetAsync("art_1");
+        Assert.NotNull(loaded);
+        Assert.Equal(2, loaded!.CurrentVersion);
+        Assert.Equal(["zcac:run:run_1", "zhs:task:t1"], loaded.SourceRefs);
+
+        Assert.Equal("{\"runId\":\"run_1\"}", (await store.ReadVersionAsync("art_1", 1)).Content);
+        Assert.Equal("{\"v\":2}", (await store.ReadVersionAsync("art_1")).Content);
+        Assert.Equal(2, (await store.ListVersionsAsync("art_1")).Count);
+
+        var byType = await store.ListByProjectAsync(project.ProjectId, ArtifactTypes.WorkflowRun);
+        Assert.Single(byType);
+        var searched = await store.SearchAsync("验收");
+        Assert.Single(searched);
+    }
+
+    [Fact]
+    public async Task Search_FindsContentInAnyVersion()
+    {
+        var store = new ArtifactSqliteStore(_database);
+        var project = await store.GetOrCreateProjectAsync("/tmp/art-ws2");
+        await store.CreateAsync(new Artifact("art_2", project.ProjectId, ArtifactTypes.Document, "普通标题", ArtifactStatus.Draft, 1, 1, 1, []), "初稿");
+        await store.AppendVersionAsync(new Artifact("art_2", "", "", "", "", 0, 0, 0, []), "第二版引入了独特关键词 XyZ123");
+
+        var hits = await store.SearchAsync("XyZ123");
+
+        Assert.Single(hits);
+        Assert.Equal("art_2", hits[0].ArtifactId);
     }
 
     public async ValueTask DisposeAsync()

@@ -54,3 +54,5 @@ M2 剩余：Avalonia.Headless 帧计时基准（1k/10k/50k 数据集，ADR-0003 
 ## 里程碑
 
 M0 盘点（进行中）→ M1 原生桌面垂直切片 → M2 长对话性能 → M3 统一任务与插件 → M4 Artifact 与项目系统 → M5 Writing Workspace → M6 扩展生态与产品化。详见开发文档 §14。
+
+- **M4 首片**：ArtifactEngine（版本化/恢复留痕/关键词检索/sourceRefs）+ 0004_artifacts 迁移 + ZCAC run 完成自动落产物（集成测试断言真实落库）。

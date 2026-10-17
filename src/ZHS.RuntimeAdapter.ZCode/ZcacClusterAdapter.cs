@@ -1,5 +1,6 @@
 using System.Text.Json;
 using ZHS.Client;
+using ZHS.Domain.Artifacts;
 using ZHS.Domain.Tasks;
 using ZHS.Protocol.Wire;
 
@@ -17,12 +18,15 @@ public sealed class ZcacClusterAdapter : ITaskExecutor
 {
     private readonly IMcpClient _mcp;
     private readonly TimeSpan _pollInterval;
+    private readonly ArtifactEngine? _artifacts;
     private readonly Dictionary<string, string> _runByTask = [];
 
-    public ZcacClusterAdapter(IMcpClient mcp, TimeSpan? pollInterval = null)
+    /// <param name="artifacts">可选：run 完成后自动把执行摘要保存为 workflow-run 产物（M4）。</param>
+    public ZcacClusterAdapter(IMcpClient mcp, TimeSpan? pollInterval = null, ArtifactEngine? artifacts = null)
     {
         _mcp = mcp;
         _pollInterval = pollInterval ?? TimeSpan.FromMilliseconds(1000);
+        _artifacts = artifacts;
     }
 
     /// <summary>用独立编排器（standalone orchestrator.cjs）构造。env 至少包含 ZCAC_WORKSPACE；测试用 ZCAC_TEST_FAKE=1。</summary>
@@ -30,7 +34,8 @@ public sealed class ZcacClusterAdapter : ITaskExecutor
         string nodePath,
         string orchestratorPath,
         IReadOnlyDictionary<string, string> environment,
-        TimeSpan? pollInterval = null)
+        TimeSpan? pollInterval = null,
+        ArtifactEngine? artifacts = null)
     {
         var options = new McpStdioOptions
         {
@@ -38,7 +43,7 @@ public sealed class ZcacClusterAdapter : ITaskExecutor
             Arguments = [orchestratorPath],
             Environment = environment,
         };
-        return new ZcacClusterAdapter(new McpStdioClient(options), pollInterval);
+        return new ZcacClusterAdapter(new McpStdioClient(options), pollInterval, artifacts);
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
@@ -84,7 +89,9 @@ public sealed class ZcacClusterAdapter : ITaskExecutor
                     deltaProgress?.Report($"[cluster] #{sequence} {type}");
                     if (type == "RUN_COMPLETED")
                     {
-                        return await ReadRunOutputAsync(runId, cancellationToken);
+                        var output = await ReadRunOutputAsync(runId, cancellationToken);
+                        await CaptureWorkflowRunArtifactAsync(task, runId, output, cancellationToken);
+                        return output;
                     }
 
                     if (type == "RUN_FAILED")
@@ -124,6 +131,31 @@ public sealed class ZcacClusterAdapter : ITaskExecutor
 
     /// <summary>任务对应的 ZCAC runId（ExecuteAsync 之后可查）。</summary>
     public string? GetRunId(string taskId) => _runByTask.TryGetValue(taskId, out var runId) ? runId : null;
+
+    /// <summary>把集群执行摘要保存为 workflow-run 产物（sourceRefs 指回 ZCAC run）。</summary>
+    private async Task CaptureWorkflowRunArtifactAsync(TaskRecord task, string runId, string output, CancellationToken cancellationToken)
+    {
+        if (_artifacts is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var project = await _artifacts.GetOrCreateProjectAsync(task.Workspace, cancellationToken);
+            await _artifacts.SaveAsync(
+                project.ProjectId,
+                ArtifactTypes.WorkflowRun,
+                $"集群执行：{task.Title}",
+                JsonSerializer.Serialize(new { runId, task.TaskId, task.Prompt, output, capturedAt = DateTimeOffset.UtcNow }, ProtocolJson.Options),
+                [$"zcac:run:{runId}", $"zhs:task:{task.TaskId}"],
+                cancellationToken);
+        }
+        catch (Exception)
+        {
+            // 产物捕获失败不影响任务结果
+        }
+    }
 
     private async Task<string> ReadRunOutputAsync(string runId, CancellationToken cancellationToken)
     {

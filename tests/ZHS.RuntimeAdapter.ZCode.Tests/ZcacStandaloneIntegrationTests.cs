@@ -1,3 +1,5 @@
+using ZHS.Domain.Artifacts;
+using ZHS.Persistence;
 using ZHS.Domain.Tasks;
 using ZHS.RuntimeAdapter.ZCode;
 using Xunit;
@@ -27,7 +29,13 @@ public sealed class ZcacStandaloneIntegrationTests
 
         var dataDir = Path.Combine(Path.GetTempPath(), "zhs-zcac-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(dataDir);
-        await using var adapter = ZcacClusterAdapter.LaunchStandalone(
+
+        // M4：集群执行摘要自动落为 ZHS 产物（真实 SQLite）
+        var databasePath = Path.Combine(dataDir, "artifacts.sqlite");
+        await using var database = await ZhsDatabase.OpenAsync(databasePath, "it");
+        var artifactEngine = new ArtifactEngine(new ArtifactSqliteStore(database));
+
+        var adapter = ZcacClusterAdapter.LaunchStandalone(
             NodePath,
             Orchestrator,
             new Dictionary<string, string>
@@ -36,8 +44,9 @@ public sealed class ZcacStandaloneIntegrationTests
                 ["ZCAC_DATA_DIR"] = dataDir,
                 ["ZCAC_WORKSPACE"] = dataDir,
             },
-            pollInterval: TimeSpan.FromMilliseconds(200));
-
+            pollInterval: TimeSpan.FromMilliseconds(200),
+            artifacts: artifactEngine);
+        await using var _ = adapter;
         await adapter.InitializeAsync();
 
         var task = new TaskRecord("task_it", "集成测试", "集成测试任务：验证独立编排器", dataDir, TaskStatus.Pending, 0, 0);
@@ -52,6 +61,16 @@ public sealed class ZcacStandaloneIntegrationTests
             adapter.GetRunId("task_it") ?? throw new InvalidOperationException("runId not tracked"),
             timeout.Token);
         Assert.Equal("completed", status.Status);
+
+        // 产物断言：workflow-run 类型、sourceRefs 指回 ZCAC run、内容含输出、可检索
+        var project = await artifactEngine.GetOrCreateProjectAsync(dataDir);
+        var artifacts = await artifactEngine.ListByProjectAsync(project.ProjectId, ArtifactTypes.WorkflowRun);
+        var artifact = Assert.Single(artifacts);
+        Assert.StartsWith("zcac:run:", artifact.SourceRefs[0]);
+        var content = await artifactEngine.ReadAsync(artifact.ArtifactId);
+        Assert.Contains("succeeded", content.Content);
+        var searched = await artifactEngine.SearchAsync("集成测试");
+        Assert.Contains(artifact.ArtifactId, searched.Select(hit => hit.ArtifactId));
     }
 
     private sealed class ProgressReporter(Action<string> sink) : IProgress<string>

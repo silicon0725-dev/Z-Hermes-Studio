@@ -18,7 +18,7 @@ public sealed class ZhsDatabase : IAsyncDisposable
     private readonly SqliteConnection _connection;
     private readonly string _appVersion;
 
-    public const string CurrentSchemaVersion = "0003_tasks";
+    public const string CurrentSchemaVersion = "0004_artifacts";
 
     private static readonly SchemaMigration[] Migrations =
     [
@@ -31,6 +31,34 @@ public sealed class ZhsDatabase : IAsyncDisposable
             """),
         new("0002_settings_index", """
             CREATE INDEX IF NOT EXISTS idx_app_setting_time ON app_setting(time_updated);
+            """),
+        new("0004_artifacts", """
+            CREATE TABLE IF NOT EXISTS project (
+                project_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                workspace_path TEXT NOT NULL UNIQUE,
+                created_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS artifact (
+                artifact_id TEXT PRIMARY KEY,
+                project_id TEXT NOT NULL,
+                type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL,
+                current_version INTEGER NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                source_refs TEXT NOT NULL DEFAULT '[]'
+            );
+            CREATE INDEX IF NOT EXISTS idx_artifact_project ON artifact(project_id, type);
+            CREATE TABLE IF NOT EXISTS artifact_version (
+                artifact_id TEXT NOT NULL,
+                version INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                source_refs TEXT NOT NULL DEFAULT '[]',
+                PRIMARY KEY (artifact_id, version)
+            );
             """),
         new("0003_tasks", """
             CREATE TABLE IF NOT EXISTS task (
