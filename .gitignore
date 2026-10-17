@@ -1,0 +1,37 @@
+# Build artifacts
+bin/
+obj/
+out/
+dist/
+publish/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+
+# .NET
+*.deps.json.tmp
+project.lock.json
+
+# Node (backend adapter / packs tooling)
+node_modules/
+npm-debug.log*
+
+# Local databases & runtime artifacts
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# Logs & diagnostics
+*.log
+logs/
+
+# Benchmark raw samples（报告摘录进 docs/PERFORMANCE.md，原始数据不入库）
+benchmarks/results/
+
+# OS
+.DS_Store
+Thumbs.db

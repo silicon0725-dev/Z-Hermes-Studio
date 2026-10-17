@@ -1,0 +1,49 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ZHS.Desktop.MainWindow"
+        Title="Z Hermes Studio"
+        Width="1100" Height="720">
+
+    <Grid ColumnDefinitions="320,*">
+        <!-- 左：会话列表 + 新建 -->
+        <DockPanel Grid.Column="0" Margin="8">
+            <TextBlock DockPanel.Dock="Top" Text="会话" FontWeight="Bold" Margin="0,0,0,6" />
+            <Button DockPanel.Dock="Bottom" Command="{Binding LoadSessionsCommand}" Content="刷新列表" Margin="0,6,0,0" />
+            <Button DockPanel.Dock="Bottom" Command="{Binding CreateSessionCommand}" Content="新建会话" Margin="0,6,0,0" />
+            <TextBox DockPanel.Dock="Bottom" Text="{Binding WorkspacePath}" Watermark="工作目录" Margin="0,6,0,0" />
+            <ListBox ItemsSource="{Binding Sessions}" SelectedItem="{Binding SelectedSession}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="2">
+                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding SessionId}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <!-- 右：聊天区（虚拟化列表） -->
+        <DockPanel Grid.Column="1" Margin="8">
+            <TextBlock DockPanel.Dock="Top" Text="{Binding StatusText}" Opacity="0.7" Margin="0,0,0,6" />
+            <Button DockPanel.Dock="Top"
+                    Command="{Binding CurrentChat.LoadOlderCommand}"
+                    IsVisible="{Binding CurrentChat.HasMoreHistory}"
+                    Content="加载更早的消息" HorizontalAlignment="Left" Margin="0,0,0,4" />
+            <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                <Button DockPanel.Dock="Right" Command="{Binding CurrentChat.SendCommand}" Content="发送" MinWidth="72" Margin="8,0,0,0" />
+                <Button DockPanel.Dock="Right" Command="{Binding CurrentChat.CancelCommand}" Content="取消" MinWidth="72" Margin="8,0,0,0" />
+                <TextBox Text="{Binding CurrentChat.InputText, Mode=TwoWay}"
+                         Watermark="输入消息（新建会话后可发送）"
+                         MinHeight="56" AcceptsReturn="True" />
+            </DockPanel>
+            <ListBox x:Name="MessageList" ItemsSource="{Binding CurrentChat.Messages}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Display}" TextWrapping="Wrap" Margin="0,4" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+    </Grid>
+</Window>

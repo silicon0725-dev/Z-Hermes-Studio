@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/ZHS.Benchmarks/ZHS.Benchmarks.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/ZHS.Chat/ZHS.Chat.csproj" />
+    <Project Path="src/ZHS.Client/ZHS.Client.csproj" />
+    <Project Path="src/ZHS.Desktop/ZHS.Desktop.csproj" />
+    <Project Path="src/ZHS.Persistence/ZHS.Persistence.csproj" />
+    <Project Path="src/ZHS.Presentation/ZHS.Presentation.csproj" />
+    <Project Path="src/ZHS.Protocol/ZHS.Protocol.csproj" />
+    <Project Path="src/ZHS.RuntimeAdapter.ZCode/ZHS.RuntimeAdapter.ZCode.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ZHS.Chat.Tests/ZHS.Chat.Tests.csproj" />
+    <Project Path="tests/ZHS.Client.Tests/ZHS.Client.Tests.csproj" />
+    <Project Path="tests/ZHS.Persistence.Tests/ZHS.Persistence.Tests.csproj" />
+    <Project Path="tests/ZHS.Presentation.Tests/ZHS.Presentation.Tests.csproj" />
+    <Project Path="tests/ZHS.Protocol.Tests/ZHS.Protocol.Tests.csproj" />
+    <Project Path="tests/ZHS.RuntimeAdapter.ZCode.Tests/ZHS.RuntimeAdapter.ZCode.Tests.csproj" />
+  </Folder>
+</Solution>
