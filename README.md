@@ -18,6 +18,8 @@
 | `src/ZHS.Presentation` | 纯 MVVM：流式助手消息、取消、会话切换、**历史时间线（初始页 + 加载更早，只读模式）** |
 | `src/ZHS.Desktop` | Avalonia 11 壳：会话列表（点击 **resume 恢复可续聊**，失败回退只读）、虚拟化消息列表、贴底跟随、前插锚点补偿、**会话切换取消过期加载（§7.1）**；三平台发布验证通过 |
 | `src/ZHS.Persistence` | **ZHS 自有 SQLite（ADR-0004）**：schema_migration 迁移纪律（id+checksum+app_version，篡改即失败）+ app_setting 表 → SettingsStore；`~/.zhs/settings.sqlite`，首个消费者是工作目录记忆 |
+| `src/ZHS.Client`（新增） | `McpStdioClient`：通用 stdio MCP 客户端（ZCAC 及未来任何 MCP server） |
+| ZCAC 集群 Adapter（M3 L2） | `ZcacClusterAdapter`：ITaskExecutor 的集群实现（cluster_create → events 游标轮询 → RUN_COMPLETED / cluster_stop）；**ZCAC 已可脱离 monorepo 独立构建运行**（惰性 import 补丁 + esbuild 配方，见协议笔记）；对独立编排器的真实集成测试通过（零模型成本） |
 | `benchmarks/ZHS.Benchmarks` | **M2 基准框架（ADR-0003）**：Avalonia.Headless 驱动真实 MainWindow，确定性数据集 1k/10k/50k，P50/95/99 + GC/分配 + 管道吞吐；首轮数据见 [docs/PERFORMANCE.md](docs/PERFORMANCE.md)（核心结论：虚拟化生效、追加 P95 ≤ 6.6ms、50k 首屏达标；首屏 P95 尖峰归因 GC，优化计划在案） |
 | 测试 ×5 + CI | 54 单测 + 6 真实 e2e（流式回合+历史读回 / 真实取消 / v4 订阅 / rowsRange / 断连×2）全绿 |
 

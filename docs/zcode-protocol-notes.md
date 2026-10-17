@@ -88,3 +88,15 @@ sessionId 在 `result.session.sessionId`（兼容平铺/纯字符串历史形态
 - `session/stop` 的参数形态（M1 接取消功能时核对）
 - `session/subscribe`（v1 遗留面，无 unsubscribe）与 **v4 订阅**（`v4/conversation/frame` 推送，clientHello/connectionId 准入要求，见 ADR-0002 开放问题）——事件层从轮询升级为订阅的路径
 - `session/resume`、`session/fork`、`session/read`、`session/messages`（历史加载，M2 分页设计输入）
+
+## ZCAC MCP 集成（2026-10-17，独立构建 + 真实集成测试通过 ✅）
+
+- **独立构建配方**（ZCAC 首次脱离 ZCode monorepo 运行）：
+  1. 补丁 `src/adapters/zcode/agent-executor.ts` 与 `list-models.ts`：`@zcode/bootstrap` 顶层 import 改为惰性 `await import()`（该路径仅 in-process 模式执行；protocol/fake 模式不触发）——上游贡献候选；
+  2. 独立 package.json（deps：zod、@modelcontextprotocol/sdk；devDeps：esbuild）；
+  3. `esbuild src/mcp/orchestrator.ts --bundle --platform=node --format=cjs --external:'@zcode/*'`（约 935KB）；
+  4. 运行：Node ≥ 24（node:sqlite）；`ZCAC_TEST_FAKE=1` 启用零模型假执行器（AutoFakeExecutor 50ms 自动完成）。
+- **MCP 线协议要点**：MCP SDK 严格要求每条消息带 `jsonrpc:"2.0"`（zcode app-server 宽容无此字段——两套组帧不能共用）；初始化握手 `initialize`（protocolVersion "2024-11-05"、clientInfo）→ `notifications/initialized` 通知 → `tools/list` / `tools/call`；工具结果 `content[0].text`（ZCAC 约定为 JSON 字符串）。
+- **已验证工具契约**：`cluster_create{task, mode}` → `{runId, taskId, status:"started"}`；`events{runId, afterSequence}` 游标重放（实测 10 事件：RUN_CREATED→TASK_*→AGENT_*→ARTIFACT_CREATED→RUN_COMPLETED）；`cluster_status` → `{status, active, tasks, events 尾巴}`；`task_list` → 任务明细（role/status/attempt/durationMs）；`cluster_stop{runId}`。
+- **ZHS 侧实现**：`ZHS.Client.McpStdioClient`（通用 stdio MCP 客户端）+ `ZHS.RuntimeAdapter.ZCode.ZcacClusterAdapter`（ITaskExecutor 的集群实现：create→events 轮询→RUN_COMPLETED，TryCancel→cluster_stop）；集成测试对独立编排器全链路通过。
+- **环境事实**：本机 Node 10 过旧，独立 Node 24（/tmp/zhs-m0/node24）+ 编排器 bundle（/tmp/zhs-m0/zcac-standalone）均为临时产物，重启即失；重建配方如上。
