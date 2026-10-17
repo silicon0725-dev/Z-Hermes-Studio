@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using ZHS.Domain.Artifacts;
 using ZHS.Domain.Tasks;
 using ZHS.Persistence;
+using ZHS.Presentation.Artifacts;
 using ZHS.Presentation;
 using ZHS.Presentation.Chat;
 using ZHS.Presentation.Tasks;
@@ -14,6 +16,7 @@ public class App : Application
 {
     private MainViewModel? _main;
     private TasksViewModel? _tasks;
+    private ArtifactsViewModel? _artifacts;
     private ZhsDatabase? _database;
 
     public override void Initialize()
@@ -29,10 +32,12 @@ public class App : Application
             IAppSettings? settings = database is not null ? new SettingsStore(database) : null;
             var backend = ZcodeChatBackend.LaunchDefault();
 
+            var artifactEngine = database is not null ? new ArtifactEngine(new ArtifactSqliteStore(database)) : null;
             var main = new MainViewModel(
                 backend,
                 action => Avalonia.Threading.Dispatcher.UIThread.Post(action),
-                settings);
+                settings,
+                artifactEngine);
             _main = main;
 
             if (database is not null)
@@ -43,7 +48,13 @@ public class App : Application
                 _ = _tasks.RefreshAsync();
             }
 
-            desktop.MainWindow = new MainWindow { DataContext = main, Tasks = _tasks };
+            if (artifactEngine is not null)
+            {
+                _artifacts = new ArtifactsViewModel(artifactEngine, action => Avalonia.Threading.Dispatcher.UIThread.Post(action), () => main.WorkspacePath);
+                _ = _artifacts.RefreshAsync();
+            }
+
+            desktop.MainWindow = new MainWindow { DataContext = main, Tasks = _tasks, Artifacts = _artifacts };
             desktop.Exit += async (_, _) => await DisposeAsync();
             _ = main.InitializeAsync();
             _ = main.LoadSessionsAsync();

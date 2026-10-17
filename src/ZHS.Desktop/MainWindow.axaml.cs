@@ -18,6 +18,9 @@ public partial class MainWindow : Window
     /// <summary>任务面板 VM（由 App 注入；XAML 内 TasksHost 以此为 DataContext）。</summary>
     public ZHS.Presentation.Tasks.TasksViewModel? Tasks { get; set; }
 
+    /// <summary>产物面板 VM（由 App 注入；XAML 内 ArtifactsHost 以此为 DataContext）。</summary>
+    public ZHS.Presentation.Artifacts.ArtifactsViewModel? Artifacts { get; set; }
+
     public MainWindow()
     {
         InitializeComponent();
@@ -33,9 +36,16 @@ public partial class MainWindow : Window
     {
         base.OnOpened(args);
         _scroller = this.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
-        if (this.GetVisualDescendants().OfType<Control>().FirstOrDefault(control => control.Name == "TasksHost") is { } tasksHost)
+        foreach (var control in this.GetVisualDescendants().OfType<Control>())
         {
-            tasksHost.DataContext = Tasks;
+            if (control.Name == "TasksHost")
+            {
+                control.DataContext = Tasks;
+            }
+            else if (control.Name == "ArtifactsHost")
+            {
+                control.DataContext = Artifacts;
+            }
         }
     }
 

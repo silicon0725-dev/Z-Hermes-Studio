@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using ZHS.Chat.Streaming;
+using ZHS.Domain.Artifacts;
 
 namespace ZHS.Presentation.Chat;
 
@@ -12,6 +13,8 @@ public sealed class ChatViewModel : ObservableObject
 
     private readonly IChatSession? _session;
     private readonly UiPost _uiPost;
+    private readonly ArtifactEngine? _artifacts;
+    private readonly string? _workspace;
     private readonly Func<long?, int, CancellationToken, Task<HistoryPage>> _historyLoader;
     private CancellationTokenSource? _turnCancellation;
     private string _inputText = string.Empty;
@@ -38,22 +41,32 @@ public sealed class ChatViewModel : ObservableObject
         private set => SetProperty(ref _hasMoreHistory, value);
     }
 
-    public ChatViewModel(IChatSession session, UiPost uiPost)
-        : this(uiPost, session.SessionId, (before, limit, ct) => session.ReadOlderAsync(before, limit, ct))
+    public ChatViewModel(IChatSession session, UiPost uiPost, ArtifactEngine? artifacts = null, string? workspace = null)
+        : this(uiPost, session.SessionId, (before, limit, ct) => session.ReadOlderAsync(before, limit, ct), artifacts, workspace)
     {
         _session = session;
     }
 
     /// <summary>历史（只读）模式：既存会话的时间线浏览。</summary>
-    public ChatViewModel(UiPost uiPost, string sessionId, Func<long?, int, CancellationToken, Task<HistoryPage>> historyLoader)
+    public ChatViewModel(
+        UiPost uiPost,
+        string sessionId,
+        Func<long?, int, CancellationToken, Task<HistoryPage>> historyLoader,
+        ArtifactEngine? artifacts = null,
+        string? workspace = null)
     {
         _uiPost = uiPost;
         SessionId = sessionId;
+        _artifacts = artifacts;
+        _workspace = workspace;
         _historyLoader = historyLoader;
         SendCommand = new AsyncRelayCommand(SendAsync);
         CancelCommand = new AsyncRelayCommand(CancelAsync);
         LoadOlderCommand = new AsyncRelayCommand(LoadOlderAsync);
+        SaveArtifactCommand = new AsyncRelayCommand(SaveLastReplyAsArtifactAsync);
     }
+
+    public AsyncRelayCommand SaveArtifactCommand { get; }
 
     public AsyncRelayCommand SendCommand { get; }
 
@@ -233,6 +246,39 @@ public sealed class ChatViewModel : ObservableObject
                 entry.Text + (entry.State is "interrupted" or "failed" ? $"（{entry.State}）" : string.Empty)),
             _ => new ChatMessageViewModel(ChatMessageRole.System, $"· {entry.Kind}"),
         };
+    }
+
+    /// <summary>把最后一条助手回复保存为 document 产物（sourceRef 指回会话）。</summary>
+    private async Task SaveLastReplyAsArtifactAsync()
+    {
+        if (_artifacts is null || IsBusy)
+        {
+            return;
+        }
+
+        var reply = Messages.LastOrDefault(message => message.Role == ChatMessageRole.Assistant && !string.IsNullOrWhiteSpace(message.Text));
+        if (reply is null)
+        {
+            Append(new ChatMessageViewModel(ChatMessageRole.System, "（没有可保存的助手回复）"));
+            return;
+        }
+
+        try
+        {
+            var project = await _artifacts.GetOrCreateProjectAsync(_workspace ?? $"zhs://sessions/{SessionId}");
+            var title = reply.Text.Length <= 24 ? reply.Text : reply.Text[..24];
+            var artifact = await _artifacts.SaveAsync(
+                project.ProjectId,
+                ArtifactTypes.Document,
+                title,
+                reply.Text,
+                [$"zcode:session:{SessionId}"]);
+            Append(new ChatMessageViewModel(ChatMessageRole.System, $"（已存为产物 {artifact.ArtifactId}：{artifact.Title}）"));
+        }
+        catch (Exception exception)
+        {
+            Append(new ChatMessageViewModel(ChatMessageRole.System, $"（保存产物失败：{exception.Message}）"));
+        }
     }
 
     private void Append(ChatMessageViewModel message)

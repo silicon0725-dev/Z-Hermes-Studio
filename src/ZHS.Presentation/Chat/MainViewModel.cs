@@ -7,6 +7,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly IChatBackend _backend;
     private readonly UiPost _uiPost;
     private readonly IAppSettings? _settings;
+    private readonly ZHS.Domain.Artifacts.ArtifactEngine? _artifacts;
     private CancellationTokenSource? _openCancellation;
 
     public ObservableCollection<SessionSummary> Sessions { get; } = [];
@@ -47,11 +48,12 @@ public sealed class MainViewModel : ObservableObject
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         "zhs-workspace");
 
-    public MainViewModel(IChatBackend backend, UiPost uiPost, IAppSettings? settings = null)
+    public MainViewModel(IChatBackend backend, UiPost uiPost, IAppSettings? settings = null, ZHS.Domain.Artifacts.ArtifactEngine? artifacts = null)
     {
         _backend = backend;
         _uiPost = uiPost;
         _settings = settings;
+        _artifacts = artifacts;
         LoadSessionsCommand = new AsyncRelayCommand(LoadSessionsAsync);
         CreateSessionCommand = new AsyncRelayCommand(CreateSessionAsync);
     }
@@ -167,7 +169,7 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var session = await _backend.OpenSessionAsync(summary.SessionId, cancellation);
-            var chat = new ChatViewModel(session, _uiPost);
+            var chat = new ChatViewModel(session, _uiPost, _artifacts, WorkspacePath);
             _uiPost(() =>
             {
                 CurrentChat = chat;
@@ -187,7 +189,9 @@ public sealed class MainViewModel : ObservableObject
                 var chat = new ChatViewModel(
                     _uiPost,
                     summary.SessionId,
-                    (before, limit, ct) => _backend.ReadSessionHistoryAsync(summary.SessionId, before, limit, ct));
+                    (before, limit, ct) => _backend.ReadSessionHistoryAsync(summary.SessionId, before, limit, ct),
+                    _artifacts,
+                    WorkspacePath);
                 _uiPost(() =>
                 {
                     CurrentChat = chat;

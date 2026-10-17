@@ -46,6 +46,38 @@
                     </ListBox>
                 </DockPanel>
             </TabItem>
+            <TabItem Header="产物">
+                <DockPanel x:Name="ArtifactsHost">
+                    <Button DockPanel.Dock="Bottom" Command="{Binding RefreshCommand}" Content="刷新产物" Margin="0,6,0,0" />
+                    <Button DockPanel.Dock="Bottom" Command="{Binding RestoreSelectedVersionCommand}" Content="恢复选中版本" Margin="0,6,0,0" />
+                    <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+                        <Button DockPanel.Dock="Right" Command="{Binding SearchCommand}" Content="检索" MinWidth="56" Margin="8,0,0,0" />
+                        <TextBox Text="{Binding SearchText}" Watermark="关键词（标题+内容）" />
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="11" Opacity="0.7" Margin="0,6,0,0" />
+                    <TextBox DockPanel.Dock="Bottom" Text="{Binding ContentText}" IsReadOnly="True" Watermark="产物内容预览" FontSize="11" MinHeight="64" MaxHeight="140" Margin="0,6,0,0" TextWrapping="Wrap" AcceptsReturn="True" />
+                    <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding Versions}" SelectedItem="{Binding SelectedVersion}" MaxHeight="96" FontSize="11">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock>
+                                    <Run Text="v" /><Run Text="{Binding Version}" /><Run Text=" · " /><Run Text="{Binding CreatedAtText}" />
+                                    <Run Text=" " /><Run Text="{Binding SourceSummary}" Foreground="#888888" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedArtifact}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis" Text="{Binding SourceSummary}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </TabItem>
         </TabControl>
 
         <!-- 右：聊天区（虚拟化列表） -->
@@ -57,6 +89,7 @@
                     Content="加载更早的消息" HorizontalAlignment="Left" Margin="0,0,0,4" />
             <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
                 <Button DockPanel.Dock="Right" Command="{Binding CurrentChat.SendCommand}" Content="发送" MinWidth="72" Margin="8,0,0,0" />
+                <Button DockPanel.Dock="Right" Command="{Binding CurrentChat.SaveArtifactCommand}" Content="存为产物" MinWidth="72" Margin="8,0,0,0" />
                 <Button DockPanel.Dock="Right" Command="{Binding CurrentChat.CancelCommand}" Content="取消" MinWidth="72" Margin="8,0,0,0" />
                 <TextBox Text="{Binding CurrentChat.InputText, Mode=TwoWay}"
                          Watermark="输入消息（新建会话后可发送）"
