@@ -14,6 +14,9 @@ public sealed class ZcodeChatBackend : IChatBackend
         _runtime = runtime;
     }
 
+    /// <summary>底层 Runtime（Task Engine 的单会话执行器等复用）。</summary>
+    public ZcodeRuntime Runtime => _runtime;
+
     public static ZcodeChatBackend LaunchDefault(ZcodeAppServerOptions? options = null)
     {
         return new ZcodeChatBackend(ZcodeRuntime.Launch(options));

@@ -15,6 +15,9 @@ public partial class MainWindow : Window
     private bool _anchoringPrepend;
     private double _extentBeforePrepend;
 
+    /// <summary>任务面板 VM（由 App 注入；XAML 内 TasksHost 以此为 DataContext）。</summary>
+    public ZHS.Presentation.Tasks.TasksViewModel? Tasks { get; set; }
+
     public MainWindow()
     {
         InitializeComponent();
@@ -24,6 +27,16 @@ public partial class MainWindow : Window
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);
+    }
+
+    protected override void OnOpened(EventArgs args)
+    {
+        base.OnOpened(args);
+        _scroller = this.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+        if (this.GetVisualDescendants().OfType<Control>().FirstOrDefault(control => control.Name == "TasksHost") is { } tasksHost)
+        {
+            tasksHost.DataContext = Tasks;
+        }
     }
 
     private ChatViewModel? Chat => (DataContext as MainViewModel)?.CurrentChat;
@@ -41,12 +54,6 @@ public partial class MainWindow : Window
             };
             AttachChat(main.CurrentChat);
         }
-    }
-
-    protected override void OnOpened(EventArgs args)
-    {
-        base.OnOpened(args);
-        _scroller = this.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
     }
 
     private void AttachChat(ChatViewModel? chat)

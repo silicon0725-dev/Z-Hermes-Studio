@@ -5,23 +5,48 @@
         Width="1100" Height="720">
 
     <Grid ColumnDefinitions="320,*">
-        <!-- 左：会话列表 + 新建 -->
-        <DockPanel Grid.Column="0" Margin="8">
-            <TextBlock DockPanel.Dock="Top" Text="会话" FontWeight="Bold" Margin="0,0,0,6" />
-            <Button DockPanel.Dock="Bottom" Command="{Binding LoadSessionsCommand}" Content="刷新列表" Margin="0,6,0,0" />
-            <Button DockPanel.Dock="Bottom" Command="{Binding CreateSessionCommand}" Content="新建会话" Margin="0,6,0,0" />
-            <TextBox DockPanel.Dock="Bottom" Text="{Binding WorkspacePath}" Watermark="工作目录" Margin="0,6,0,0" />
-            <ListBox ItemsSource="{Binding Sessions}" SelectedItem="{Binding SelectedSession}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Margin="2">
-                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding SessionId}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-        </DockPanel>
+        <!-- 左：会话 / 任务 两个页签 -->
+        <TabControl Grid.Column="0" Margin="8">
+            <TabItem Header="会话">
+                <DockPanel>
+                    <Button DockPanel.Dock="Bottom" Command="{Binding LoadSessionsCommand}" Content="刷新列表" Margin="0,6,0,0" />
+                    <Button DockPanel.Dock="Bottom" Command="{Binding CreateSessionCommand}" Content="新建会话" Margin="0,6,0,0" />
+                    <TextBox DockPanel.Dock="Bottom" Text="{Binding WorkspacePath}" Watermark="工作目录" Margin="0,6,0,0" />
+                    <ListBox ItemsSource="{Binding Sessions}" SelectedItem="{Binding SelectedSession}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding SessionId}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </TabItem>
+            <TabItem Header="任务">
+                <DockPanel x:Name="TasksHost">
+                    <Button DockPanel.Dock="Bottom" Command="{Binding RefreshCommand}" Content="刷新任务" Margin="0,6,0,0" />
+                    <Button DockPanel.Dock="Bottom" Command="{Binding CreateAndRunCommand}" Content="新建并运行任务" Margin="0,6,0,0" />
+                    <TextBox DockPanel.Dock="Bottom" Text="{Binding NewPrompt}" Watermark="任务提示词" Margin="0,6,0,0" AcceptsReturn="True" MinHeight="48" />
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="11" Opacity="0.7" Margin="0,6,0,0" />
+                    <TextBox DockPanel.Dock="Bottom" Text="{Binding JournalText}" IsReadOnly="True" Watermark="执行日志（选中任务查看）" MinHeight="72" MaxHeight="140" FontSize="11" Margin="0,6,0,0" />
+                    <ListBox ItemsSource="{Binding Tasks}" SelectedItem="{Binding SelectedTask}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Status}" FontSize="11" Opacity="0.75" />
+                                        <TextBlock Text="{Binding TaskId}" FontSize="11" Opacity="0.5" Margin="8,0,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
 
         <!-- 右：聊天区（虚拟化列表） -->
         <DockPanel Grid.Column="1" Margin="8">

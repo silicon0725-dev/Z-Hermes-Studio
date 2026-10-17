@@ -18,7 +18,7 @@ public sealed class ZhsDatabase : IAsyncDisposable
     private readonly SqliteConnection _connection;
     private readonly string _appVersion;
 
-    public const string CurrentSchemaVersion = "0002_settings_index";
+    public const string CurrentSchemaVersion = "0003_tasks";
 
     private static readonly SchemaMigration[] Migrations =
     [
@@ -31,6 +31,28 @@ public sealed class ZhsDatabase : IAsyncDisposable
             """),
         new("0002_settings_index", """
             CREATE INDEX IF NOT EXISTS idx_app_setting_time ON app_setting(time_updated);
+            """),
+        new("0003_tasks", """
+            CREATE TABLE IF NOT EXISTS task (
+                task_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                workspace TEXT NOT NULL,
+                status TEXT NOT NULL,
+                session_id TEXT,
+                output_text TEXT,
+                error TEXT,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS task_event (
+                task_id TEXT NOT NULL,
+                sequence INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                text TEXT,
+                PRIMARY KEY (task_id, sequence)
+            );
             """),
     ];
 

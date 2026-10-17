@@ -1,9 +1,11 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using ZHS.Domain.Tasks;
 using ZHS.Persistence;
 using ZHS.Presentation;
 using ZHS.Presentation.Chat;
+using ZHS.Presentation.Tasks;
 using ZHS.RuntimeAdapter.ZCode;
 
 namespace ZHS.Desktop;
@@ -11,6 +13,7 @@ namespace ZHS.Desktop;
 public class App : Application
 {
     private MainViewModel? _main;
+    private TasksViewModel? _tasks;
     private ZhsDatabase? _database;
 
     public override void Initialize()
@@ -22,13 +25,25 @@ public class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var settings = OpenSettings();
+            var database = OpenDatabase();
+            IAppSettings? settings = database is not null ? new SettingsStore(database) : null;
+            var backend = ZcodeChatBackend.LaunchDefault();
+
             var main = new MainViewModel(
-                ZcodeChatBackend.LaunchDefault(),
+                backend,
                 action => Avalonia.Threading.Dispatcher.UIThread.Post(action),
                 settings);
             _main = main;
-            desktop.MainWindow = new MainWindow { DataContext = main };
+
+            if (database is not null)
+            {
+                var store = new TaskSqliteStore(database);
+                var engine = new TaskEngine(store, store, new SingleSessionTaskExecutor(backend.Runtime));
+                _tasks = new TasksViewModel(engine, action => Avalonia.Threading.Dispatcher.UIThread.Post(action), () => main.WorkspacePath);
+                _ = _tasks.RefreshAsync();
+            }
+
+            desktop.MainWindow = new MainWindow { DataContext = main, Tasks = _tasks };
             desktop.Exit += async (_, _) => await DisposeAsync();
             _ = main.InitializeAsync();
             _ = main.LoadSessionsAsync();
@@ -37,8 +52,8 @@ public class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    /// <summary>ZHS 自有设置库（~/.zhs/settings.sqlite；打开失败降级为无持久化，不阻塞启动）。</summary>
-    private IAppSettings? OpenSettings()
+    /// <summary>ZHS 自有库（~/.zhs/settings.sqlite）。打开失败降级为无持久化，不阻塞启动。</summary>
+    private ZhsDatabase? OpenDatabase()
     {
         try
         {
@@ -48,7 +63,7 @@ public class App : Application
             Directory.CreateDirectory(directory);
             var database = ZhsDatabase.OpenAsync(Path.Combine(directory, "settings.sqlite")).GetAwaiter().GetResult();
             _database = database;
-            return new SettingsStore(database);
+            return database;
         }
         catch (Exception)
         {

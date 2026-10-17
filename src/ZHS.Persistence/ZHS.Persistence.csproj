@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ZHS.Domain\ZHS.Domain.csproj" />
     <ProjectReference Include="..\ZHS.Presentation\ZHS.Presentation.csproj" />
   </ItemGroup>
 </Project>

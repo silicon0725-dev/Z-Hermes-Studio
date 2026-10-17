@@ -11,6 +11,7 @@
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ZHS.Persistence\ZHS.Persistence.csproj" />
     <ProjectReference Include="..\..\src\ZHS.RuntimeAdapter.ZCode\ZHS.RuntimeAdapter.ZCode.csproj" />
   </ItemGroup>
 </Project>

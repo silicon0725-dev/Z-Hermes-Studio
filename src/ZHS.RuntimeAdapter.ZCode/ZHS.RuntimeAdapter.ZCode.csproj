@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ZHS.Client\ZHS.Client.csproj" />
+    <ProjectReference Include="..\ZHS.Domain\ZHS.Domain.csproj" />
     <ProjectReference Include="..\ZHS.Presentation\ZHS.Presentation.csproj" />
     <ProjectReference Include="..\ZHS.Protocol\ZHS.Protocol.csproj" />
   </ItemGroup>

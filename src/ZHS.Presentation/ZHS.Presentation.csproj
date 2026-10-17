@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\ZHS.Chat\ZHS.Chat.csproj" />
+    <ProjectReference Include="..\ZHS.Domain\ZHS.Domain.csproj" />
     <ProjectReference Include="..\ZHS.Protocol\ZHS.Protocol.csproj" />
   </ItemGroup>
 </Project>
