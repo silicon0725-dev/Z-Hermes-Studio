@@ -5,8 +5,20 @@
         Width="1100" Height="720">
 
     <Grid ColumnDefinitions="320,*">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <!-- 左：会话 / 任务 两个页签 -->
-        <TabControl Grid.Column="0" Margin="8">
+        <DockPanel Grid.Row="0" Grid.Column="0" Margin="8,8,8,0">
+            <TextBlock DockPanel.Dock="Bottom" Text="{Binding WorkspaceDescription}" FontSize="11" Opacity="0.7" Margin="0,4,0,8" TextWrapping="Wrap" />
+            <ComboBox SelectedIndex="{Binding WorkspaceIndex}" HorizontalAlignment="Stretch">
+                <ComboBoxItem Content="General" />
+                <ComboBoxItem Content="Engineering" />
+                <ComboBoxItem Content="Research" />
+            </ComboBox>
+        </DockPanel>
+        <TabControl Grid.Row="1" Grid.Column="0" Margin="8">
             <TabItem Header="会话">
                 <DockPanel>
                     <Button DockPanel.Dock="Bottom" Command="{Binding LoadSessionsCommand}" Content="刷新列表" Margin="0,6,0,0" />
@@ -50,6 +62,7 @@
                 <DockPanel x:Name="ArtifactsHost">
                     <Button DockPanel.Dock="Bottom" Command="{Binding RefreshCommand}" Content="刷新产物" Margin="0,6,0,0" />
                     <Button DockPanel.Dock="Bottom" Command="{Binding RestoreSelectedVersionCommand}" Content="恢复选中版本" Margin="0,6,0,0" />
+                    <Button DockPanel.Dock="Bottom" Command="{Binding DiffSelectedVersionCommand}" Content="对比当前版" Margin="0,6,0,0" />
                     <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
                         <Button DockPanel.Dock="Right" Command="{Binding SearchCommand}" Content="检索" MinWidth="56" Margin="8,0,0,0" />
                         <TextBox Text="{Binding SearchText}" Watermark="关键词（标题+内容）" />

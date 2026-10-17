@@ -71,7 +71,13 @@ public sealed class ArtifactsViewModel : ObservableObject
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         RestoreSelectedVersionCommand = new AsyncRelayCommand(RestoreSelectedVersionAsync);
+        DiffSelectedVersionCommand = new AsyncRelayCommand(DiffSelectedVersionAsync);
     }
+
+    public AsyncRelayCommand DiffSelectedVersionCommand { get; }
+
+    /// <summary>工作区级产物类型过滤（null = 全部）；由 MainViewModel 随工作区切换注入。</summary>
+    public string? TypeFilter { get; set; }
 
     public AsyncRelayCommand RefreshCommand { get; }
 
@@ -121,7 +127,7 @@ public sealed class ArtifactsViewModel : ObservableObject
         {
             var workspace = _workspaceProvider();
             var project = await _engine.GetOrCreateProjectAsync(workspace);
-            var artifacts = await _engine.ListByProjectAsync(project.ProjectId);
+            var artifacts = await _engine.ListByProjectAsync(project.ProjectId, TypeFilter);
             _uiPost(() =>
             {
                 Items.Clear();
@@ -187,6 +193,31 @@ public sealed class ArtifactsViewModel : ObservableObject
         catch (Exception exception)
         {
             _uiPost(() => StatusText = $"产物读取失败：{exception.Message}");
+        }
+    }
+
+    /// <summary>选中版本与当前版的行级差异（M4 基本差异查看；对比结果写进内容预览区）。</summary>
+    private async Task DiffSelectedVersionAsync()
+    {
+        if (SelectedArtifact is null || SelectedVersion is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var current = await _engine.ReadAsync(SelectedArtifact.ArtifactId);
+            var diff = await _engine.DiffAsync(SelectedArtifact.ArtifactId, SelectedVersion.Version, current.Version);
+            var text = string.Join("\n", diff.Select(line => line.Display));
+            _uiPost(() =>
+            {
+                ContentText = $"── v{SelectedVersion.Version} → v{current.Version}（+{diff.Count(l => l.Kind == DiffLineKind.Added)} / -{diff.Count(l => l.Kind == DiffLineKind.Removed)}）──\n" + text;
+                StatusText = $"差异：v{SelectedVersion.Version} vs v{current.Version}";
+            });
+        }
+        catch (Exception exception)
+        {
+            _uiPost(() => StatusText = $"对比失败：{exception.Message}");
         }
     }
 

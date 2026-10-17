@@ -43,6 +43,48 @@ public sealed class MainViewModel : ObservableObject
 
     private string _statusText = "就绪";
 
+    /// <summary>ComboBox 桥接（枚举绑定用索引）。</summary>
+    public int WorkspaceIndex
+    {
+        get => (int)WorkspaceKind;
+        set => WorkspaceKind = (WorkspaceKind)value;
+    }
+
+    public WorkspaceKind WorkspaceKind
+    {
+        get => _workspaceKind;
+        set
+        {
+            if (SetProperty(ref _workspaceKind, value))
+            {
+                var profile = WorkspaceProfile.For(value);
+                WorkspaceDescription = profile.Description;
+                ArtifactTypeFilter = profile.ArtifactTypeFilter;
+                ChatArtifactType = profile.ChatArtifactType;
+                if (_settings is not null)
+                {
+                    _ = _settings.SetAsync("workspace.kind", value.ToString());
+                }
+            }
+        }
+    }
+
+    private WorkspaceKind _workspaceKind = WorkspaceKind.General;
+
+    public string WorkspaceDescription
+    {
+        get => _workspaceDescription;
+        private set => SetProperty(ref _workspaceDescription, value);
+    }
+
+    private string _workspaceDescription = WorkspaceProfile.For(WorkspaceKind.General).Description;
+
+    /// <summary>聊天“存为产物”使用的类型（随工作区变化）。</summary>
+    public string ChatArtifactType { get; private set; } = WorkspaceProfile.For(WorkspaceKind.General).ChatArtifactType;
+
+    /// <summary>产物面板的类型过滤（随工作区变化；null = 全部）。</summary>
+    public string? ArtifactTypeFilter { get; private set; }
+
     /// <summary>新建会话使用的工作目录（M1 切片用文本框，后续换成目录选择器）。</summary>
     public string WorkspacePath { get; set; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
@@ -68,7 +110,13 @@ public sealed class MainViewModel : ObservableObject
 
         try
         {
-            var saved = await _settings.GetAsync("workspace.path");
+            var savedKind = await _settings.GetAsync("workspace.kind");
+        if (Enum.TryParse<WorkspaceKind>(savedKind, out var kind))
+        {
+            _uiPost(() => WorkspaceKind = kind);
+        }
+
+        var saved = await _settings.GetAsync("workspace.path");
             if (!string.IsNullOrWhiteSpace(saved))
             {
                 _uiPost(() => WorkspacePath = saved);
@@ -169,7 +217,7 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var session = await _backend.OpenSessionAsync(summary.SessionId, cancellation);
-            var chat = new ChatViewModel(session, _uiPost, _artifacts, WorkspacePath);
+            var chat = new ChatViewModel(session, _uiPost, _artifacts, WorkspacePath, () => ChatArtifactType);
             _uiPost(() =>
             {
                 CurrentChat = chat;
@@ -191,7 +239,8 @@ public sealed class MainViewModel : ObservableObject
                     summary.SessionId,
                     (before, limit, ct) => _backend.ReadSessionHistoryAsync(summary.SessionId, before, limit, ct),
                     _artifacts,
-                    WorkspacePath);
+                    WorkspacePath,
+                    () => ChatArtifactType);
                 _uiPost(() =>
                 {
                     CurrentChat = chat;

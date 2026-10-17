@@ -15,6 +15,7 @@ public sealed class ChatViewModel : ObservableObject
     private readonly UiPost _uiPost;
     private readonly ArtifactEngine? _artifacts;
     private readonly string? _workspace;
+    private readonly Func<string> _artifactType;
     private readonly Func<long?, int, CancellationToken, Task<HistoryPage>> _historyLoader;
     private CancellationTokenSource? _turnCancellation;
     private string _inputText = string.Empty;
@@ -41,8 +42,8 @@ public sealed class ChatViewModel : ObservableObject
         private set => SetProperty(ref _hasMoreHistory, value);
     }
 
-    public ChatViewModel(IChatSession session, UiPost uiPost, ArtifactEngine? artifacts = null, string? workspace = null)
-        : this(uiPost, session.SessionId, (before, limit, ct) => session.ReadOlderAsync(before, limit, ct), artifacts, workspace)
+    public ChatViewModel(IChatSession session, UiPost uiPost, ArtifactEngine? artifacts = null, string? workspace = null, Func<string>? artifactType = null)
+        : this(uiPost, session.SessionId, (before, limit, ct) => session.ReadOlderAsync(before, limit, ct), artifacts, workspace, artifactType)
     {
         _session = session;
     }
@@ -53,12 +54,14 @@ public sealed class ChatViewModel : ObservableObject
         string sessionId,
         Func<long?, int, CancellationToken, Task<HistoryPage>> historyLoader,
         ArtifactEngine? artifacts = null,
-        string? workspace = null)
+        string? workspace = null,
+        Func<string>? artifactType = null)
     {
         _uiPost = uiPost;
         SessionId = sessionId;
         _artifacts = artifacts;
         _workspace = workspace;
+        _artifactType = artifactType ?? (() => ZHS.Domain.Artifacts.ArtifactTypes.Document);
         _historyLoader = historyLoader;
         SendCommand = new AsyncRelayCommand(SendAsync);
         CancelCommand = new AsyncRelayCommand(CancelAsync);
@@ -269,7 +272,7 @@ public sealed class ChatViewModel : ObservableObject
             var title = reply.Text.Length <= 24 ? reply.Text : reply.Text[..24];
             var artifact = await _artifacts.SaveAsync(
                 project.ProjectId,
-                ArtifactTypes.Document,
+                _artifactType(),
                 title,
                 reply.Text,
                 [$"zcode:session:{SessionId}"]);

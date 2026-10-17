@@ -79,3 +79,33 @@ public sealed class ArtifactEngineTests
         Assert.Single(await engine.ListProjectsAsync());
     }
 }
+
+public sealed class ArtifactDifferTests
+{
+    [Fact]
+    public void Diff_IdentifiesAddedAndRemovedLines()
+    {
+        var diff = ArtifactDiffer.Diff("第一行\n共同行\n旧的三行", "第一行\n共同行\n新的三行\n新增行");
+
+        var added = diff.Where(line => line.Kind == DiffLineKind.Added).Select(line => line.Text).ToList();
+        var removed = diff.Where(line => line.Kind == DiffLineKind.Removed).Select(line => line.Text).ToList();
+        Assert.Equal(["旧的三行"], removed);
+        Assert.Equal(["新的三行", "新增行"], added);
+        Assert.Contains(diff, line => line.Kind == DiffLineKind.Unchanged && line.Text == "共同行");
+    }
+
+    [Fact]
+    public void Diff_IdenticalContent_AllUnchanged()
+    {
+        var diff = ArtifactDiffer.Diff("a\nb", "a\nb");
+        Assert.All(diff, line => Assert.Equal(DiffLineKind.Unchanged, line.Kind));
+    }
+
+    [Fact]
+    public void Display_UsesDiffPrefixes()
+    {
+        var diff = ArtifactDiffer.Diff("x", "y");
+        Assert.Contains("+ y", diff.Select(line => line.Display));
+        Assert.Contains("- x", diff.Select(line => line.Display));
+    }
+}

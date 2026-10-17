@@ -54,6 +54,19 @@ public class App : Application
                 _ = _artifacts.RefreshAsync();
             }
 
+            if (_artifacts is not null)
+            {
+                _artifacts.TypeFilter = main.ArtifactTypeFilter;
+                main.PropertyChanged += (_, changed) =>
+                {
+                    if (changed.PropertyName == nameof(MainViewModel.ArtifactTypeFilter))
+                    {
+                        _artifacts.TypeFilter = main.ArtifactTypeFilter;
+                        _ = _artifacts.RefreshAsync();
+                    }
+                };
+            }
+
             desktop.MainWindow = new MainWindow { DataContext = main, Tasks = _tasks, Artifacts = _artifacts };
             desktop.Exit += async (_, _) => await DisposeAsync();
             _ = main.InitializeAsync();
