@@ -27,7 +27,7 @@ Adapter 采用**两层边界**，ZHS 的 C# 侧永远只依赖稳定协议，不
 - **事件获取：v1 `session/events` 游标轮询为已实现基线**（M1 聊天切片，含 `model.streaming`/`text_delta` 流式增量与取消闭环）；**v4 推送订阅已活体验证**（2026-10-17：直连 CLI 无 clientHello 门槛，ACK + `v4/conversation/frame` 推送，e2e 冒烟通过）——从轮询升级到 v4 订阅列为 M2 项，帧 schema（rows/delta/coalesce，ZHS §7.3 流式合并的上游参照）建模随 M2 虚拟化时间线一并做。
 - 会话池策略沿用 ZCAC 验证过的规则：按 workspace 池化、超时/崩溃即 poison 销毁、干净 session 归还（每 workspace 默认 2 idle）。
 
-### L2 —— 能力边界（M3+）
+### L2 —— 能力边界（M3+；2026-10-17 已用真实 Worker + 真实模型全链路验证 ✅）
 
 - 任务编排与集群复用 **ZCAC 的 MCP 工具面与事件 journal**（16 个工具；`events(runId?, afterSequence?)` 游标重放语义已核实）。ZHS Task Engine 的领域模型映射到该契约；任务状态机直接采纳 ZCAC 的显式迁移表（pending/ready/running/blocked/succeeded/failed/retry_wait/cancelled/interrupted）。
 - 若需 ZCAC 尚未暴露的能力，走"monorepo 内嵌自有包"路径（参照 ZCAC `install-inline.js` 的 `plugins.dirs` 注册模式），由 ZHS 维护该内嵌包，不试图导出上游内部端口。

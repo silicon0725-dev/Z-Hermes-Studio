@@ -100,3 +100,10 @@ sessionId 在 `result.session.sessionId`（兼容平铺/纯字符串历史形态
 - **已验证工具契约**：`cluster_create{task, mode}` → `{runId, taskId, status:"started"}`；`events{runId, afterSequence}` 游标重放（实测 10 事件：RUN_CREATED→TASK_*→AGENT_*→ARTIFACT_CREATED→RUN_COMPLETED）；`cluster_status` → `{status, active, tasks, events 尾巴}`；`task_list` → 任务明细（role/status/attempt/durationMs）；`cluster_stop{runId}`。
 - **ZHS 侧实现**：`ZHS.Client.McpStdioClient`（通用 stdio MCP 客户端）+ `ZHS.RuntimeAdapter.ZCode.ZcacClusterAdapter`（ITaskExecutor 的集群实现：create→events 轮询→RUN_COMPLETED，TryCancel→cluster_stop）；集成测试对独立编排器全链路通过。
 - **环境事实**：本机 Node 10 过旧，独立 Node 24（/tmp/zhs-m0/node24）+ 编排器 bundle（/tmp/zhs-m0/zcac-standalone）均为临时产物，重启即失；重建配方如上。
+
+## 真实集群验证（2026-10-17，protocol Worker + 真实模型 ✅）
+
+- 配置：`ZCAC_WORKER_MODE=protocol`、`ZCODE_CLI_BUNDLE=/opt/ZCode/resources/glm/zcode.cjs`、`ZCAC_MODEL=<providerId>/<modelId>@<level>`（providerId 为 UUID 也直接生效，实测 deepseek）。
+- Worker 拉起机制：编排器用 `process.execPath`（即运行编排器的 node24）+ `[cliBundlePath, app-server, --stdio"]` —— 编排器跑在 node24 下则 Worker 天然继承；zcode bundle 在纯 node24 下可运行（无需 ELECTRON_RUN_AS_NODE）。
+- 实测（最小任务）：RUN_CREATED → … → TASK_SUCCEEDED（Worker 15.5s，真实模型调用）→ ARTIFACT_CREATED → RUN_COMPLETED，总耗时 19s（Python 探针）/ 42s（C# e2e 含构建与启动）。
+- C# e2e（`ZHS_ZCAC_E2E=1`）：McpStdioClient → cluster_create → events 轮询 → task_list 断言 succeeded + ARTIFACT_CREATED + cluster_status 非 active。
